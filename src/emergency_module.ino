@@ -112,45 +112,9 @@ void loop() {
     LoRa.print("\n");
     LoRa.endPacket();
 
-    Serial.print(gps_data.UTCtime);
-    Serial.print("\n");
-    Serial.print(EMERGENCY);
-    Serial.print("\n");
-    Serial.print(gps_data.longitude, 6);
-    Serial.print("\n");
-    Serial.print(gps_data.latitude, 6);
-    Serial.print("\n");
-    Serial.print(battery_percentage);
-    Serial.print("\n");
-
-//    Serial.print("UTC time:");
-//    Serial.print(gps_data.UTCtime);
-//    Serial.print("\nState:");
-//    Serial.print(EMERGENCY);
-//    Serial.print("\nLongitude:");
-//    Serial.print(gps_data.longitude, 6);
-//    Serial.print("\nLatitude:");
-//    Serial.print(gps_data.latitude, 6);
-//    Serial.print("\nNumber of satellites:");
-//    Serial.print(gps_data.numSats);
-//    Serial.print("\nValid reading:");
-//    Serial.print(gps_data.valid);
-//    
-//    Serial.print("\nBus voltage:");
-//    Serial.print(busvoltage);
-//    Serial.print("\nPercentage (%):");
-//    Serial.print(battery_percentage);
-//    Serial.print("\nCurrent consumption (mA):");
-//    Serial.print(current_mA);
-//    Serial.print("\nBattery time left:");
-//    Serial.println(battery_time_left);
-
-
     LAST_BROADCAST_TS = TIME_NOW;
   }
 }
-
-
 
 float getBatteryPercentage(float voltage_reading) {
   const float incremental_level = (MAX_BATTERY_VOLTAGE- MIN_BATTERY_VOLTAGE) / 20.0;
@@ -181,7 +145,6 @@ float getBatteryPercentage(float voltage_reading) {
 
   return battery_percentage;
 }
-
 
 float getBatteryTimeLeft(float voltage_reading, float current_reading) {
   float mAh_left = 0.0;
