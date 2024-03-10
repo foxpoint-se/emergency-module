@@ -5,8 +5,8 @@
 #include <Adafruit_INA219.h>
 #include "emergencyModule.h"
 
-#define SERVO_PIN 2
-#define LED_PIN 1
+#define SERVO_PIN 3
+#define LED_PIN 2
 
 Servo magnetServo;
 Adafruit_INA219 ina219;
@@ -32,6 +32,12 @@ struct GPSData gps_data = {" ", 0.0, 'F', 0.0, 'F', 0, 0, 0.0, 0.0, false};
 float getBatteryPercentage(float voltage_reading);
 float getBatteryTimeLeft(float voltage_reading, float current_reading);
 
+const int DIM_FREQ_MS = 30;
+const int LED_MAX_BRIGHT_LVL = 255;
+const int DIM_LEVEL = 5;
+const int LED_BLINK_FREQ = 60000;
+unsigned long LAST_LED_BLINK_TS = 0;
+
 void setup() {
   Serial.begin(9600);
   Serial1.begin(9600);
@@ -40,7 +46,7 @@ void setup() {
   digitalWrite (LED_PIN, LOW);
 
   magnetServo.attach(SERVO_PIN);
-  magnetServo.writeMicroseconds(1500);
+  magnetServo.writeMicroseconds(1300);
   
   if (!LoRa.begin(868E6)) {
     Serial.println("Starting LoRa failed!");
@@ -53,7 +59,7 @@ void setup() {
   }
 
   delay(1000);
-  Serial.print("Initiation complete, starting program");
+  Serial.println("Initiation complete, starting program");
 }
 
 void loop() {
@@ -81,16 +87,33 @@ void loop() {
   }
 
   // Check if the time since last gps coordinate exceeds the set emergency value (10 mins)
-  if ((TIME_NOW - LAST_VALID_GPS_TS) > EMERGENCY_TIME_MS) {
+  if (((TIME_NOW - LAST_VALID_GPS_TS) > EMERGENCY_TIME_MS) && !EMERGENCY) {
     EMERGENCY = 1;
-    BROADCAST_PERIOD_MS = 1000;
 
+    // Move servo back and forth to ensure a detachment from Ålen
+    TIME_NOW = millis();
     magnetServo.writeMicroseconds(2000);
-    digitalWrite(LED_PIN, HIGH);
+    while((millis() - TIME_NOW) < 2000);
+    
+    TIME_NOW = millis();
+    magnetServo.writeMicroseconds(1300);
+    while((millis() - TIME_NOW) < 2000);
+    
+    magnetServo.writeMicroseconds(2000);
+  }
+
+  // Check if there we are in emergency mode and it is time to flash the LED then flash LED 3x
+  if (EMERGENCY && ((TIME_NOW - LAST_LED_BLINK_TS) > LED_BLINK_FREQ)){
+    for(int i = 0; i < 5; i++){
+      fadeLEDOn();
+      fadeLEDOff();
+    }
+    
+    LAST_LED_BLINK_TS = TIME_NOW;
   }
 
   // Send Lora message
-  if ((TIME_NOW - LAST_BROADCAST_TS) > BROADCAST_PERIOD_MS){
+  if (((TIME_NOW - LAST_BROADCAST_TS) > BROADCAST_PERIOD_MS) && gps_data.valid){
     shuntvoltage = ina219.getShuntVoltage_mV();
     busvoltage = ina219.getBusVoltage_V();
     current_mA = ina219.getCurrent_mA();
@@ -111,7 +134,7 @@ void loop() {
     LoRa.print(battery_percentage);
     LoRa.print("\n");
     LoRa.endPacket();
-
+    
     LAST_BROADCAST_TS = TIME_NOW;
   }
 }
@@ -155,4 +178,39 @@ float getBatteryTimeLeft(float voltage_reading, float current_reading) {
   battery_time_left = mAh_left / current_reading;
 
   return battery_time_left;
+}
+
+void fadeLEDOn(){
+  int dim_value = 0;
+  unsigned long last_led_cmd = millis();
+  unsigned long now = millis();
+
+  while(dim_value < LED_MAX_BRIGHT_LVL){
+    now = millis();
+    
+    if((now - last_led_cmd) > DIM_FREQ_MS){
+      dim_value += DIM_LEVEL;
+      analogWrite(LED_PIN, dim_value);
+
+      last_led_cmd = now;
+    }
+  }
+}
+
+
+void fadeLEDOff(){
+  int dim_value = LED_MAX_BRIGHT_LVL;
+  unsigned long last_led_cmd = millis();
+  unsigned long now = millis();
+
+  while(dim_value > 0){
+    now = millis();
+    
+    if((now - last_led_cmd) > DIM_FREQ_MS){
+      dim_value -= DIM_LEVEL;
+      analogWrite(LED_PIN, dim_value);
+
+      last_led_cmd = now;
+    }
+  }  
 }
