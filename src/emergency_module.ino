@@ -17,7 +17,7 @@ bool EMERGENCY = 0;
 const int GPS_PERIOD_MS = 1000;
 unsigned long LAST_GPS_TS = 0;
 unsigned long LAST_VALID_GPS_TS = 0;
-const unsigned long EMERGENCY_TIME_MS = 20000;
+const unsigned long EMERGENCY_TIME_MS = 120000;
 
 const float MAX_BATTERY_VOLTAGE = 4.2;
 const float MIN_BATTERY_VOLTAGE = 3.4;
@@ -46,7 +46,7 @@ void setup() {
   digitalWrite (LED_PIN, LOW);
 
   magnetServo.attach(SERVO_PIN);
-  magnetServo.writeMicroseconds(1300);
+  magnetServo.writeMicroseconds(1000);
   
   if (!LoRa.begin(868E6)) {
     Serial.println("Starting LoRa failed!");
@@ -96,13 +96,17 @@ void loop() {
     while((millis() - TIME_NOW) < 2000);
     
     TIME_NOW = millis();
-    magnetServo.writeMicroseconds(1300);
+    magnetServo.writeMicroseconds(1000);
     while((millis() - TIME_NOW) < 2000);
     
+    TIME_NOW = millis();
     magnetServo.writeMicroseconds(2000);
+    while((millis() - TIME_NOW) < 2000);
+
+    magnetServo.writeMicroseconds(1000);
   }
 
-  // Check if there we are in emergency mode and it is time to flash the LED then flash LED 3x
+  // Check if there we are in emergency mode and it is time to flash LEDS
   if (EMERGENCY && ((TIME_NOW - LAST_LED_BLINK_TS) > LED_BLINK_FREQ)){
     for(int i = 0; i < 5; i++){
       fadeLEDOn();
@@ -148,8 +152,10 @@ float getBatteryPercentage(float voltage_reading) {
 
   if (voltage_reading >= MAX_BATTERY_VOLTAGE) {
     battery_percentage = 100.0;
+
   }else if (voltage_reading <= MIN_BATTERY_VOLTAGE){
     battery_percentage = 0.0;
+
   }else {
     
     while(battery_percentage == 0.0){
@@ -196,7 +202,6 @@ void fadeLEDOn(){
     }
   }
 }
-
 
 void fadeLEDOff(){
   int dim_value = LED_MAX_BRIGHT_LVL;
